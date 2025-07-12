@@ -31,7 +31,7 @@ class AnswerGenerator:
         response = self.pipeline(prompt, max_new_tokens=200, do_sample=True)
         return response[0]['generated_text']
 
-retriever = DocumentRetriever("Doc.txt")
+retriever = DocumentRetriever("docs.txt")
 generator = AnswerGenerator()
 
 import streamlit as st
