@@ -3,8 +3,8 @@
 # app.py
 
 import streamlit as st
-from retriever import DocumentRetriever
-from generator import AnswerGenerator
+from Retriever import DocumentRetriever
+from Generator import AnswerGenerator
 import tempfile
 import os
 import PyPDF2
