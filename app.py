@@ -1,46 +1,68 @@
 # -*- coding: utf-8 -*-
 
+# app.py
 
 import streamlit as st
-from Retriever import DocumentRetriever
-from Generator import AnswerGenerator
+from retriever import DocumentRetriever
+from generator import AnswerGenerator
+import tempfile
+import os
+import PyPDF2
 
-# Initialize retriever and generator
-retriever = DocumentRetriever("docs.txt")
-generator = AnswerGenerator()
-
-# Page setup
+# Streamlit page setup
 st.set_page_config(page_title="RAG Q&A Chatbot", layout="centered")
 st.title("RAG-Powered Q&A Chatbot")
-st.markdown("Ask any question based on the uploaded documents!")
+st.markdown("Upload documents (TXT or PDF) and ask questions based on them.")
 
-# Initialize chat history
+# Upload area
+uploaded_files = st.file_uploader("Upload one or more documents", type=["txt", "pdf"], accept_multiple_files=True)
+
+# Load documents and create retriever dynamically
+documents = []
+
+def read_pdf(file):
+    pdf_reader = PyPDF2.PdfReader(file)
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text() or ""
+    return text
+
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        if uploaded_file.type == "text/plain":
+            documents.append(uploaded_file.read().decode("utf-8"))
+        elif uploaded_file.type == "application/pdf":
+            documents.append(read_pdf(uploaded_file))
+
+if documents:
+    with st.spinner("Embedding uploaded documents..."):
+        with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
+            temp_file.write("\n".join(documents))
+            temp_doc_path = temp_file.name
+        retriever = DocumentRetriever(temp_doc_path)
+        generator = AnswerGenerator()
+else:
+    st.warning("Please upload at least one document to begin.")
+    st.stop()
+
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Chat input area
-with st.chat_input("Type your question...") as chat_input:
-    query = st.session_state.get("user_input", "")
-    if chat_input:
-        st.session_state.user_input = chat_input
+# User input
+query = st.text_input("Ask a question based on the uploaded documents:")
 
-# Handle question & response
-if st.session_state.get("user_input"):
-    query = st.session_state.user_input
-    with st.spinner("Thinking... "):
+# Handle query
+if query:
+    with st.spinner("Thinking..."):
         context = "\n".join(retriever.retrieve(query))
         answer = generator.generate(query, context)
+        st.session_state.chat_history.append({
+            "user": query,
+            "context": context,
+            "bot": answer
+        })
 
-    # Save to chat history
-    st.session_state.chat_history.append({
-        "user": query,
-        "context": context,
-        "bot": answer
-    })
-    
-    st.session_state.user_input = ""
-
-# Display the full chat history
+# Display chat history
 for chat in st.session_state.chat_history:
     with st.chat_message("user"):
         st.markdown(chat["user"])
