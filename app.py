@@ -34,11 +34,22 @@ class AnswerGenerator:
 retriever = DocumentRetriever("Doc.txt")
 generator = AnswerGenerator()
 
-while True:
-    query = input("\n Ask a question (or type 'exit' to quit): ")
-    if query.lower() == 'exit':
-        break
-    context = "\n".join(retriever.retrieve(query))
-    print("\n Retrieved Context:\n", context)
-    answer = generator.generate(query, context)
-    print("\n Answer:\n", answer)
+import streamlit as st
+
+st.set_page_config(page_title="RAG Q&A Chatbot", layout="centered")
+st.title("RAG Q&A Chatbot")
+st.write("Ask a question based on the documents...")
+
+query = st.text_input("Enter your question:")
+
+if query:
+    with st.spinner("Retrieving answer..."):
+        context = "\n".join(retriever.retrieve(query))
+        answer = generator.generate(query, context)
+
+    st.subheader("Retrieved Context")
+    st.write(context)
+
+    st.subheader("Answer")
+    st.write(answer)
+
