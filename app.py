@@ -31,25 +31,50 @@ class AnswerGenerator:
         response = self.pipeline(prompt, max_new_tokens=200, do_sample=True)
         return response[0]['generated_text']
 
+import streamlit as st
+from Retriever import DocumentRetriever
+from Generator import AnswerGenerator
+
+# Initialize retriever and generator
 retriever = DocumentRetriever("docs.txt")
 generator = AnswerGenerator()
 
-import streamlit as st
-
+# Page setup
 st.set_page_config(page_title="RAG Q&A Chatbot", layout="centered")
-st.title("RAG Q&A Chatbot")
-st.write("Ask a question based on the documents...")
+st.title("RAG-Powered Q&A Chatbot")
+st.markdown("Ask any question based on the uploaded documents!")
 
-query = st.text_input("Enter your question:")
+# Initialize chat history
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-if query:
-    with st.spinner("Retrieving answer..."):
+# Chat input area
+with st.chat_input("Type your question...") as chat_input:
+    query = st.session_state.get("user_input", "")
+    if chat_input:
+        st.session_state.user_input = chat_input
+
+# Handle question & response
+if st.session_state.get("user_input"):
+    query = st.session_state.user_input
+    with st.spinner("Thinking... "):
         context = "\n".join(retriever.retrieve(query))
         answer = generator.generate(query, context)
 
-    st.subheader("Retrieved Context")
-    st.write(context)
+    # Save to chat history
+    st.session_state.chat_history.append({
+        "user": query,
+        "context": context,
+        "bot": answer
+    })
+    
+    st.session_state.user_input = ""
 
-    st.subheader("Answer")
-    st.write(answer)
-
+# Display the full chat history
+for chat in st.session_state.chat_history:
+    with st.chat_message("user"):
+        st.markdown(chat["user"])
+    with st.chat_message("assistant"):
+        st.markdown(f"**Answer:** {chat['bot']}")
+        with st.expander("Show Retrieved Context"):
+            st.write(chat["context"])
